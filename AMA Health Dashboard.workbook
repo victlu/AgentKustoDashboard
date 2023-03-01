@@ -150,30 +150,45 @@
             "description": "Override selected tab parameter ",
             "isRequired": true,
             "isGlobal": true,
-            "query": "{\"version\":\"1.0.0\",\"content\":\"[\\r\\n    { \\\"value\\\":\\\"SubOverview\\\", \\\"label\\\": \\\"SubOverview\\\", \\\"selected\\\":true }\\r\\n]\",\"transformers\":null}",
+            "query": "{\"version\":\"1.0.0\",\"content\":\"[\\r\\n    { \\\"value\\\":\\\"Overview\\\", \\\"label\\\": \\\"Overview\\\", \\\"selected\\\":true }\\r\\n]\",\"transformers\":null}",
+            "isHiddenWhenLocked": true,
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 8
+          },
+          {
+            "id": "361f1434-6df1-4fd6-8aa9-bc5b111d4887",
+            "version": "KqlParameterItem/1.0",
+            "name": "DistributionSelection",
+            "type": 1,
+            "isRequired": true,
+            "isGlobal": true,
+            "query": "{\"version\":\"1.0.0\",\"content\":\"[\\r\\n    { \\\"value\\\":\\\"ALL\\\", \\\"label\\\": \\\"ALL\\\", \\\"selected\\\":true }\\r\\n]\",\"transformers\":null}",
+            "isHiddenWhenLocked": true,
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 8
+          },
+          {
+            "id": "361f1434-6df1-4fd6-8aa9-bc5b111d4887",
+            "version": "KqlParameterItem/1.0",
+            "name": "AgentHealthSelection",
+            "type": 1,
+            "isRequired": true,
+            "isGlobal": true,
+            "query": "{\"version\":\"1.0.0\",\"content\":\"[\\r\\n    { \\\"value\\\":\\\"\\\\\\\"Unhealthy\\\\\\\",\\\\\\\"Healthy\\\\\\\"\\\", \\\"label\\\": \\\"\\\\\\\"Unhealthy\\\\\\\",\\\\\\\"Healthy\\\\\\\"\\\", \\\"selected\\\":true }\\r\\n]\",\"transformers\":null}",
             "isHiddenWhenLocked": true,
             "timeContext": {
               "durationMs": 86400000
             },
             "queryType": 8,
-            "value": "Overview"
-          },
-          {
-            "id": "361f1434-6df1-4fd6-8aa9-bc5b111d4887",
-            "version": "KqlParameterItem/1.0",
-            "name": "ResourceTypeSelected",
-            "type": 1,
-            "isGlobal": true,
-            "isHiddenWhenLocked": true,
-            "timeContext": {
-              "durationMs": 86400000
-            },
-            "value": "ALL_Res_Types"
+            "value": null
           }
         ],
         "style": "pills",
-        "queryType": 0,
-        "resourceType": "microsoft.operationalinsights/workspaces"
+        "queryType": 8
       },
       "name": "global-selectedtab-param"
     },
@@ -587,9 +602,9 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| where ResType == '{ResourceTypeSelected}' or 'ALL_Res_Types' == '{ResourceTypeSelected}' or '' == '{ResourceTypeSelected}'//single selection\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer\r\n| extend State = iff(LastHeartbeat < ago({UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State);\r\ndatatable(State:string, Rank:int)[\"Unhealthy\", 0, \"Healthy\", 1]\r\n| join kind = leftouter heartbeatCount on State\r\n| extend Count = iff(isempty(State1), 0, Count)\r\n| project-away State1\r\n| extend Rank = iff(State == 'Unhealthy' and Count == 0, 2, Rank)\r\n| order by Rank asc\r\n| project-reorder State, Count",
+              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == '{DistributionSelection}', true,\r\n                             OSName == '{DistributionSelection}', true,\r\n                             AgentVersion == '{DistributionSelection}', true,\r\n                             'ALL' == '{DistributionSelection}', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer\r\n| extend State = iff(LastHeartbeat < ago({UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State);\r\ndatatable(State:string, Rank:int)[\"Unhealthy\", 0, \"Healthy\", 1]\r\n| join kind = leftouter heartbeatCount on State\r\n| extend Count = iff(isempty(State1), 0, Count)\r\n| project-away State1\r\n| extend Rank = iff(State == 'Unhealthy' and Count == 0, 2, Rank)\r\n| order by Rank asc\r\n| project-reorder State, Count",
               "size": 1,
-              "title": "Agent Health Snapshot : {ResourceTypeSelected}",
+              "title": "Agent Health Snapshot : {DistributionSelection}",
               "showRefreshButton": true,
               "exportMultipleValues": true,
               "exportedParameters": [
@@ -628,10 +643,10 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where TimeGenerated > ago(14d)\r\n| where Category == \"Azure Monitor Agent\"\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| where ResType == '{ResourceTypeSelected}' or 'ALL_Res_Types' == '{ResourceTypeSelected}' or '' == '{ResourceTypeSelected}'//single selection\r\n| extend timeSegment = bin_at(TimeGenerated,1d,now())\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer, timeSegment\r\n| extend State = iff(LastHeartbeat < (timeSegment + 1d - {UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State, timeSegment\r\n);\r\nheartbeatCount\r\n| order by timeSegment asc, State asc\r\n| project-reorder timeSegment, State, Count",
+              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where TimeGenerated > ago(14d)\r\n| where Category == \"Azure Monitor Agent\"\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == '{DistributionSelection}', true,\r\n                             OSName == '{DistributionSelection}', true,\r\n                             AgentVersion == '{DistributionSelection}', true,\r\n                             'ALL' == '{DistributionSelection}', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| extend timeSegment = bin_at(TimeGenerated,1d,now())\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer, timeSegment\r\n| extend State = iff(LastHeartbeat < (timeSegment + 1d - {UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State, timeSegment\r\n);\r\nheartbeatCount\r\n| order by timeSegment asc, State asc\r\n| project-reorder timeSegment, State, Count",
               "size": 1,
               "aggregation": 3,
-              "title": "Agent health over selected period {ResourceTypeSelected}",
+              "title": "Agent health over selected period : {DistributionSelection}",
               "showRefreshButton": true,
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
@@ -663,12 +678,12 @@
             "content": {
               "version": "KqlItem/1.0",
               "query": "Heartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| summarize MachineCount = count() by ResType\r\n//| where MachineCount > 0\r\n| sort by MachineCount desc",
-              "size": 1,
+              "size": 0,
               "title": "Distribution by Resource Type",
               "showRefreshButton": true,
               "exportFieldName": "series",
-              "exportParameterName": "ResourceTypeSelected",
-              "exportDefaultValue": "ALL_Res_Types",
+              "exportParameterName": "DistributionSelection",
+              "exportDefaultValue": "ALL",
               "queryType": 0,
               "resourceType": "microsoft.operationalinsights/workspaces",
               "crossComponentResources": [
@@ -692,8 +707,72 @@
                 ]
               }
             },
-            "customWidth": "30",
+            "customWidth": "33",
             "name": "Distribution By Resource Type",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "Heartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| summarize MachineCount = count() by OSName\r\n//| where MachineCount > 0\r\n| sort by MachineCount desc",
+              "size": 0,
+              "title": "Distribution by Resource Platform",
+              "showRefreshButton": true,
+              "exportFieldName": "series",
+              "exportParameterName": "DistributionSelection",
+              "exportDefaultValue": "ALL",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "piechart"
+            },
+            "customWidth": "33",
+            "name": "Distribution By Resource Platform",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "Heartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| summarize MachineCount = count() by AgentVersion\r\n//| where MachineCount > 0\r\n| sort by MachineCount desc",
+              "size": 0,
+              "title": "Distribution by Agent Version",
+              "showRefreshButton": true,
+              "exportFieldName": "series",
+              "exportParameterName": "DistributionSelection",
+              "exportDefaultValue": "ALL",
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "piechart",
+              "chartSettings": {
+                "seriesLabelSettings": [
+                  {
+                    "seriesName": "Arc-enabled Servers",
+                    "color": "orange"
+                  },
+                  {
+                    "seriesName": "Virtual Machines",
+                    "color": "turquoise"
+                  },
+                  {
+                    "seriesName": "Windows client deWindows Client Devicesvices",
+                    "color": "gray"
+                  }
+                ]
+              }
+            },
+            "customWidth": "33",
+            "name": "Distribution By Agent Version",
             "styleSettings": {
               "showBorder": true
             }
@@ -712,9 +791,9 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "let TimeData = (Heartbeat\r\n| where TimeGenerated {TimeRangeSelect:query}\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| where ResType == '{ResourceTypeSelected}' or 'ALL_Res_Types' == '{ResourceTypeSelected}' or '' == '{ResourceTypeSelected}'//single selection\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer\r\n| extend State = iff(LastHeartbeat < ago({UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| extend TimeFromNow = now() - LastHeartbeat\r\n| extend [\"TimeAgo\"] = strcat(case(TimeFromNow < 2m, strcat(toint(TimeFromNow / 1m), ' seconds'), TimeFromNow < 2h, strcat(toint(TimeFromNow / 1m), ' minutes'), TimeFromNow < 2d, strcat(toint(TimeFromNow / 1h), ' hours'), strcat(toint(TimeFromNow / 1d), ' days')), ' ago')\r\n);\r\nlet DetailsData = (\r\nHeartbeat\r\n| where TimeGenerated {TimeRangeSelect:query}\r\n| where Category == \"Azure Monitor Agent\"\r\n| extend Packed = pack_all()\r\n);\r\nlet HealthStateTrend = ( \r\nHeartbeat\r\n| where TimeGenerated {TimeRangeSelect:query}\r\n| where Category == \"Azure Monitor Agent\"\r\n| make-series InternalTrend=iff(count() > 0, 1, 0) default = 0 on TimeGenerated from {TimeRangeSelect:start} to {TimeRangeSelect:end} step {UnhealthyCriteria} by Computer\r\n| extend Trend=array_slice(InternalTrend, array_length(InternalTrend) - 30, array_length(InternalTrend)-1)\r\n| extend (s_min, s_minId, s_max, s_maxId, s_avg, s_var, s_stdev) = series_stats(Trend)\r\n| project Computer, Trend, s_avg\r\n);\r\nTimeData | join DetailsData on Computer\r\n| where TimeGenerated == LastHeartbeat\r\n| join HealthStateTrend on Computer\r\n| order by State, s_avg asc, TimeAgo\r\n| project   [\"Resource Id\"]=ResourceId,    \r\n            [\"_ComputerName_\"] = Computer, \r\n            [\"Computer\"]=strcat('🖥️ ', Computer), \r\n            [\"Environment\"] = iff(ComputerEnvironment == \"Azure\", \r\n            ComputerEnvironment, Category), \r\n            [\"OS\"]=iff(isempty(OSName), OSType, OSName),\r\n            [\"Subscription\"]=SubscriptionId,\r\n            Version, \r\n            [\"Time\"]=strcat('🕒 ', TimeAgo), \r\n            State,\r\n            [\"Heartbeat Trend\"]=Trend, \r\n            [\"Details\"]=Packed\r\n//| where State == '{AgentHealthSelection}' or 'ALL' == '{AgentHealthSelection}' //single selection\r\n| where todynamic('{AgentHealthSelection}') has State or \"\" == '{AgentHealthSelection}' //Multiple Selection from agent health chart",
+        "query": "let TimeData = (Heartbeat\r\n| where TimeGenerated {TimeRangeSelect:query}\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == '{DistributionSelection}', true,\r\n                             OSName == '{DistributionSelection}', true,\r\n                             AgentVersion == '{DistributionSelection}', true,\r\n                             'ALL' == '{DistributionSelection}', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer\r\n| extend State = iff(LastHeartbeat < ago({UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| extend TimeFromNow = now() - LastHeartbeat\r\n| extend [\"TimeAgo\"] = strcat(case(TimeFromNow < 2m, strcat(toint(TimeFromNow / 1m), ' seconds'), TimeFromNow < 2h, strcat(toint(TimeFromNow / 1m), ' minutes'), TimeFromNow < 2d, strcat(toint(TimeFromNow / 1h), ' hours'), strcat(toint(TimeFromNow / 1d), ' days')), ' ago')\r\n);\r\nlet DetailsData = (\r\nHeartbeat\r\n| where TimeGenerated {TimeRangeSelect:query}\r\n| where Category == \"Azure Monitor Agent\"\r\n| extend Packed = pack_all()\r\n);\r\nlet HealthStateTrend = ( \r\nHeartbeat\r\n| where TimeGenerated {TimeRangeSelect:query}\r\n| where Category == \"Azure Monitor Agent\"\r\n| make-series InternalTrend=iff(count() > 0, 1, 0) default = 0 on TimeGenerated from {TimeRangeSelect:start} to {TimeRangeSelect:end} step {UnhealthyCriteria} by Computer\r\n| extend Trend=array_slice(InternalTrend, array_length(InternalTrend) - 30, array_length(InternalTrend)-1)\r\n| extend (s_min, s_minId, s_max, s_maxId, s_avg, s_var, s_stdev) = series_stats(Trend)\r\n| project Computer, Trend, s_avg\r\n);\r\nTimeData | join DetailsData on Computer\r\n| where TimeGenerated == LastHeartbeat\r\n| join HealthStateTrend on Computer\r\n| order by State, s_avg asc, TimeAgo\r\n| project   [\"Resource Id\"]=ResourceId,    \r\n            [\"_ComputerName_\"] = Computer, \r\n            [\"Computer\"]=strcat('🖥️ ', Computer), \r\n            [\"Environment\"] = iff(ComputerEnvironment == \"Azure\", \r\n            ComputerEnvironment, Category), \r\n            [\"OS\"]=iff(isempty(OSName), OSType, OSName),\r\n            [\"Subscription\"]=SubscriptionId,\r\n            Version, \r\n            [\"Time\"]=strcat('🕒 ', TimeAgo), \r\n            State,\r\n            [\"Heartbeat Trend\"]=Trend, \r\n            [\"Details\"]=Packed\r\n//| where State == '{AgentHealthSelection}' or 'ALL' == '{AgentHealthSelection}' //single selection\r\n| where todynamic('{AgentHealthSelection}') has State or \"\" == '{AgentHealthSelection}' //Multiple Selection from agent health chart\r\n| sort by [\"Resource Id\"] asc",
         "size": 0,
-        "title": "Agent Details {AgentHealthSelection} {ResourceTypeSelected}",
+        "title": "Agent Details {AgentHealthSelection} {DistributionSelection}",
         "noDataMessageStyle": 4,
         "showRefreshButton": true,
         "queryType": 0,
@@ -792,9 +871,20 @@
                 "showIcon": true
               }
             }
+          ],
+          "sortBy": [
+            {
+              "itemKey": "$gen_link_Resource Id_0",
+              "sortOrder": 1
+            }
           ]
         },
-        "sortBy": []
+        "sortBy": [
+          {
+            "itemKey": "$gen_link_Resource Id_0",
+            "sortOrder": 1
+          }
+        ]
       },
       "conditionalVisibility": {
         "parameterName": "selectedTab",
@@ -802,6 +892,112 @@
         "value": "Overview"
       },
       "name": "Agent Details"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppPerformanceCounters\n| take 55",
+        "size": 0,
+        "title": "CPU %",
+        "noDataMessageStyle": 4,
+        "showRefreshButton": true,
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Resource Id",
+              "formatter": 13,
+              "formatOptions": {
+                "linkTarget": "Resource",
+                "linkIsContextBlade": true,
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "_ComputerName_",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "Computer",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "State",
+              "formatter": 0,
+              "tooltipFormat": {
+                "tooltip": "Click to see details of the last event sent by this computer."
+              }
+            },
+            {
+              "columnMatch": "Environment",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "Subscription",
+              "formatter": 15,
+              "formatOptions": {
+                "linkTarget": "Resource",
+                "linkIsContextBlade": true,
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Heartbeat Trend",
+              "formatter": 10,
+              "formatOptions": {
+                "palette": "redGreen"
+              },
+              "tooltipFormat": {
+                "tooltip": "Each bar represents the bucket of time based on the Unhealthy Criteria. Showing last 30 buckets max."
+              }
+            },
+            {
+              "columnMatch": "Details",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "Subscription Id",
+              "formatter": 7,
+              "formatOptions": {
+                "linkTarget": "Url",
+                "linkIsContextBlade": false
+              }
+            },
+            {
+              "columnMatch": "SubId",
+              "formatter": 15,
+              "formatOptions": {
+                "linkTarget": "Resource",
+                "linkIsContextBlade": true,
+                "showIcon": true
+              }
+            }
+          ],
+          "sortBy": [
+            {
+              "itemKey": "Properties",
+              "sortOrder": 1
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "Properties",
+            "sortOrder": 1
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "AzureVM"
+      },
+      "name": "CPU %"
     }
   ],
   "fallbackResourceIds": [
