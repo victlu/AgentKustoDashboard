@@ -29,7 +29,7 @@
             },
             "queryType": 1,
             "resourceType": "microsoft.resourcegraph/resources",
-            "value": "/subscriptions/ebb79bc0-aa86-44a7-8111-cabbe0c43993"
+            "value": "/subscriptions/d1d8779d-38d7-4f06-91db-9cbc8de0176f"
           },
           {
             "id": "e101dbda-5c3b-469e-a505-7377f2ff5a43",
@@ -113,7 +113,7 @@
               ]
             },
             "value": {
-              "durationMs": 1209600000
+              "durationMs": 259200000
             }
           },
           {
@@ -127,8 +127,7 @@
               "additionalResourceOptions": [],
               "showDefault": false
             },
-            "jsonData": "[\r\n    {\"value\":\"1m\",\"label\":\"1 minute without heartbeat\",\"selected\":false},\r\n    {\"value\":\"5m\",\"label\":\"5 minute without heartbeat\",\"selected\":false},\r\n    {\"value\":\"30m\",\"label\":\"30 minute without heartbeat\",\"selected\":true},\r\n    {\"value\":\"1h\",\"label\":\"1 hour without heartbeat\",\"selected\":false},\r\n    {\"value\":\"2h\",\"label\":\"2 hour without heartbeat\",\"selected\":false},\r\n    {\"value\":\"8h\",\"label\":\"8 hour without heartbeat\",\"selected\":false},\r\n    {\"value\":\"1d\",\"label\":\"1 day without heartbeat\",\"selected\":false},\r\n    {\"value\":\"2d\",\"label\":\"2 day without heartbeat\",\"selected\":false},\r\n    {\"value\":\"7d\",\"label\":\"7 day without heartbeat\",\"selected\":false}\r\n]",
-            "value": "5m"
+            "jsonData": "[\r\n    {\"value\":\"1m\",\"label\":\"1 minute without heartbeat\",\"selected\":false},\r\n    {\"value\":\"5m\",\"label\":\"5 minute without heartbeat\",\"selected\":false},\r\n    {\"value\":\"30m\",\"label\":\"30 minute without heartbeat\",\"selected\":true},\r\n    {\"value\":\"1h\",\"label\":\"1 hour without heartbeat\",\"selected\":false},\r\n    {\"value\":\"2h\",\"label\":\"2 hour without heartbeat\",\"selected\":false},\r\n    {\"value\":\"8h\",\"label\":\"8 hour without heartbeat\",\"selected\":false},\r\n    {\"value\":\"1d\",\"label\":\"1 day without heartbeat\",\"selected\":false},\r\n    {\"value\":\"2d\",\"label\":\"2 day without heartbeat\",\"selected\":false},\r\n    {\"value\":\"7d\",\"label\":\"7 day without heartbeat\",\"selected\":false}\r\n]"
           }
         ],
         "style": "pills",
@@ -155,7 +154,8 @@
             "timeContext": {
               "durationMs": 86400000
             },
-            "queryType": 8
+            "queryType": 8,
+            "value": "ArcVM"
           },
           {
             "id": "361f1434-6df1-4fd6-8aa9-bc5b111d4887",
@@ -165,14 +165,12 @@
             "isRequired": true,
             "isGlobal": true,
             "query": "{\"version\":\"1.0.0\",\"content\":\"[\\r\\n    { \\\"value\\\":\\\"ALL\\\", \\\"label\\\": \\\"ALL\\\", \\\"selected\\\":true }\\r\\n]\",\"transformers\":null}",
-            "isHiddenWhenLocked": true,
             "timeContext": {
               "durationMs": 86400000
             },
             "queryType": 8
           },
           {
-            "id": "361f1434-6df1-4fd6-8aa9-bc5b111d4887",
             "version": "KqlParameterItem/1.0",
             "name": "AgentHealthSelection",
             "type": 1,
@@ -184,7 +182,7 @@
               "durationMs": 86400000
             },
             "queryType": 8,
-            "value": null
+            "id": "b82ef6a3-1bf4-4c1e-ba90-aa4594b2d1cf"
           }
         ],
         "style": "pills",
@@ -643,7 +641,7 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where TimeGenerated > ago(14d)\r\n| where Category == \"Azure Monitor Agent\"\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == '{DistributionSelection}', true,\r\n                             OSName == '{DistributionSelection}', true,\r\n                             AgentVersion == '{DistributionSelection}', true,\r\n                             'ALL' == '{DistributionSelection}', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| extend timeSegment = bin_at(TimeGenerated,1d,now())\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer, timeSegment\r\n| extend State = iff(LastHeartbeat < (timeSegment + 1d - {UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State, timeSegment\r\n);\r\nheartbeatCount\r\n| order by timeSegment asc, State asc\r\n| project-reorder timeSegment, State, Count",
+              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == '{DistributionSelection}', true,\r\n                             OSName == '{DistributionSelection}', true,\r\n                             AgentVersion == '{DistributionSelection}', true,\r\n                             'ALL' == '{DistributionSelection}', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| extend timeSegment = bin_at(TimeGenerated,{TimeRangeSelect:grain},now())\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer, timeSegment\r\n| extend State = iff(LastHeartbeat < (timeSegment + {TimeRangeSelect:grain} - {UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State, timeSegment\r\n);\r\nheartbeatCount\r\n| order by timeSegment asc, State asc\r\n| project-reorder timeSegment, State, Count",
               "size": 1,
               "aggregation": 3,
               "title": "Agent health over selected period : {DistributionSelection}",
@@ -788,6 +786,207 @@
       "name": "OverviewAgentHealth"
     },
     {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "title": "Agent Health Virtual Machines",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == 'Virtual Machines', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer\r\n| extend State = iff(LastHeartbeat < ago({UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State);\r\ndatatable(State:string, Rank:int)[\"Unhealthy\", 0, \"Healthy\", 1]\r\n| join kind = leftouter heartbeatCount on State\r\n| extend Count = iff(isempty(State1), 0, Count)\r\n| project-away State1\r\n| extend Rank = iff(State == 'Unhealthy' and Count == 0, 2, Rank)\r\n| order by Rank asc\r\n| project-reorder State, Count",
+              "size": 1,
+              "title": "Agent Health Snapshot : Virtual Machines",
+              "showRefreshButton": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "piechart",
+              "chartSettings": {
+                "seriesLabelSettings": [
+                  {
+                    "seriesName": "Unhealthy",
+                    "color": "redBright"
+                  },
+                  {
+                    "seriesName": "Healthy",
+                    "color": "green"
+                  }
+                ]
+              }
+            },
+            "customWidth": "33",
+            "name": "Agent health",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where TimeGenerated {TimeRangeSelect:query}\r\n| where Category == \"Azure Monitor Agent\"\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == 'Virtual Machines', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| extend timeSegment = bin_at(TimeGenerated,{TimeRangeSelect:grain},now())\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer, timeSegment\r\n| extend State = iff(LastHeartbeat < (timeSegment + {TimeRangeSelect:grain} - {UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State, timeSegment\r\n);\r\nheartbeatCount\r\n| order by timeSegment asc, State asc\r\n| project-reorder timeSegment, State, Count",
+              "size": 1,
+              "aggregation": 3,
+              "title": "Agent health over selected period : Virtual Machines",
+              "showRefreshButton": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "barchart",
+              "chartSettings": {
+                "seriesLabelSettings": [
+                  {
+                    "seriesName": "Unhealthy",
+                    "color": "redBright"
+                  },
+                  {
+                    "seriesName": "Healthy",
+                    "color": "green"
+                  }
+                ]
+              }
+            },
+            "customWidth": "66",
+            "name": "Agent health over selected period",
+            "styleSettings": {
+              "showBorder": true
+            }
+          }
+        ],
+        "exportParameters": true
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "AzureVM"
+      },
+      "name": "VirtualMachineAgentHealth"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "title": "Agent Health Arc",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "datatable(State:string, Rank:int)[\"Unhealthy\", 0, \"Healthy\", 1]\r\n| join kind = leftouter (\r\nresources \r\n| where type =~ \"microsoft.hybridcompute/machines\"\r\n| extend heartbeating = properties.status =~ \"Connected\"\r\n| extend extensionsEnabled = tobool(properties.agentConfiguration.extensionsEnabled)\r\n| extend extensionManagerRunning = properties.serviceStatuses.extensionService.status in (\"active\", \"running\")\r\n| extend healthy = heartbeating and (isnull(extensionsEnabled) or (extensionsEnabled and extensionManagerRunning))\r\n| project id, healthy\r\n| extend State = iff(healthy == 0, 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(id) by State\r\n) on State\r\n| extend Count = iff(isempty(State1), 0, Count)\r\n| project-away State1\r\n| project State, Count\r\n\r\n",
+              "size": 1,
+              "title": "Azure Arc Agent Health Snapshot",
+              "showRefreshButton": true,
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "{Subscription}"
+              ],
+              "visualization": "piechart",
+              "chartSettings": {
+                "seriesLabelSettings": [
+                  {
+                    "seriesName": "Unhealthy",
+                    "color": "redBright"
+                  },
+                  {
+                    "seriesName": "Healthy",
+                    "color": "green"
+                  }
+                ]
+              }
+            },
+            "customWidth": "27",
+            "name": "Azure Arc Agent Health Snapshot",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == 'Arc-enabled Servers', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer\r\n| extend State = iff(LastHeartbeat < ago({UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State);\r\ndatatable(State:string, Rank:int)[\"Unhealthy\", 0, \"Healthy\", 1]\r\n| join kind = leftouter heartbeatCount on State\r\n| extend Count = iff(isempty(State1), 0, Count)\r\n| project-away State1\r\n| extend Rank = iff(State == 'Unhealthy' and Count == 0, 2, Rank)\r\n| order by Rank asc\r\n| project-reorder State, Count",
+              "size": 1,
+              "title": "Agent Health Snapshot : Arc-enabled",
+              "showRefreshButton": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "piechart",
+              "chartSettings": {
+                "seriesLabelSettings": [
+                  {
+                    "seriesName": "Unhealthy",
+                    "color": "redBright"
+                  },
+                  {
+                    "seriesName": "Healthy",
+                    "color": "green"
+                  }
+                ]
+              }
+            },
+            "customWidth": "27",
+            "name": "Agent health",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "let heartbeatCount = (\r\nHeartbeat\r\n| where TimeGenerated {TimeRangeSelect:query}\r\n| where Category == \"Azure Monitor Agent\"\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == 'Arc-enabled Servers', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| extend timeSegment = bin_at(TimeGenerated,{TimeRangeSelect:grain},now())\r\n| summarize LastHeartbeat = max(TimeGenerated) by Computer, timeSegment\r\n| extend State = iff(LastHeartbeat < (timeSegment + {TimeRangeSelect:grain} - {UnhealthyCriteria}), 'Unhealthy', 'Healthy')\r\n| summarize Count = dcount(Computer) by State, timeSegment\r\n);\r\nheartbeatCount\r\n| order by timeSegment asc, State asc\r\n| project-reorder timeSegment, State, Count",
+              "size": 1,
+              "aggregation": 3,
+              "title": "Agent health over selected period : Arc-Enabled",
+              "showRefreshButton": true,
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "visualization": "barchart",
+              "chartSettings": {
+                "seriesLabelSettings": [
+                  {
+                    "seriesName": "Unhealthy",
+                    "color": "redBright"
+                  },
+                  {
+                    "seriesName": "Healthy",
+                    "color": "green"
+                  }
+                ]
+              }
+            },
+            "customWidth": "46",
+            "name": "Agent health over selected period",
+            "styleSettings": {
+              "showBorder": true
+            }
+          }
+        ],
+        "exportParameters": true
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "ArcVM"
+      },
+      "name": "ArcAgentHealth"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
@@ -821,13 +1020,6 @@
               "formatter": 5
             },
             {
-              "columnMatch": "State",
-              "formatter": 0,
-              "tooltipFormat": {
-                "tooltip": "Click to see details of the last event sent by this computer."
-              }
-            },
-            {
               "columnMatch": "Environment",
               "formatter": 5
             },
@@ -838,6 +1030,13 @@
                 "linkTarget": "Resource",
                 "linkIsContextBlade": true,
                 "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "State",
+              "formatter": 0,
+              "tooltipFormat": {
+                "tooltip": "Click to see details of the last event sent by this computer."
               }
             },
             {
@@ -892,6 +1091,480 @@
         "value": "Overview"
       },
       "name": "Agent Details"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "title": "Agent Details Virtual Machines",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "Heartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == 'Virtual Machines', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| summarize LastHeartBeat = arg_max(TimeGenerated, *) by _ResourceId\r\n| extend TimeFromNow = now() - LastHeartBeat\r\n| extend [\"TimeAgo\"] = strcat(case(TimeFromNow < 2m, strcat(toint(TimeFromNow / 1s), ' seconds'), TimeFromNow < 2h, strcat(toint(TimeFromNow / 1m), ' minutes'), TimeFromNow < 2d, strcat(toint(TimeFromNow / 1h), ' hours'), strcat(toint(TimeFromNow / 1d), ' days')), ' ago')\r\n| join kind=leftouter  (Heartbeat\r\n| where Category == \"SCOM Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| project _ResourceId, Category, Computer) on _ResourceId\r\n| extend SCOMAgent = iff(isnotempty(Computer1), \"Yes\", \"No\")\r\n| project LastHeartBeat, [\"Time\"]=strcat('🕒 ', TimeAgo), _ResourceId, Computer, SCOMAgent",
+              "size": 0,
+              "title": "Heartbeat Pull",
+              "timeContext": {
+                "durationMs": 86400000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ]
+            },
+            "conditionalVisibility": {
+              "parameterName": "selectedTab",
+              "comparison": "isNotEqualTo",
+              "value": "AzureVM"
+            },
+            "name": "Heartbeat Pull"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| where type == \"microsoft.compute/virtualmachines\"\r\n| extend PowerStatus = properties.extended.instanceView.powerState.displayStatus,\r\n\tOSType = properties.storageProfile.osDisk.osType,\r\n    IdentityType = identity.type\r\n| project name, id, location, resourceGroup, PowerStatus, OSType, IdentityType\r\n| join kind=leftouter (\r\nresources\r\n| where type contains \"microsoft.compute/virtualmachines/extensions\" and (name == \"MicrosoftMonitoringAgent\" or name == \"OmsAgentForLinux\" or name == \"MMAExtension\")\r\n| parse id with * \"/virtualMachines/\" ComputerName \"/\" *\r\n| extend extensionType = properties.type, \r\n\tstatus = properties.provisioningState,\r\n\tversion = properties.typeHandlerVersion\r\n| project ComputerName, MMA = name, MMAStatus = status, version\r\n) on $left.name == $right.ComputerName\r\n| join kind=leftouter (\r\nresources\r\n| where type contains \"microsoft.compute/virtualmachines/extensions\" and (name == \"AzureMonitorWindowsAgent\" or name == \"AzureMonitorLinuxAgent\")\r\n| parse id with * \"/virtualMachines/\" ComputerName \"/\" *\r\n| extend extensionType = properties.type, \r\n\tstatus = properties.provisioningState,\r\n\tversion = properties.typeHandlerVersion\r\n| project ComputerName, AMA = name, AMAStatus = status, AMAVersion = version\r\n) on $left.name == $right.ComputerName\r\n| extend Progress = case(isnotempty(MMA) and isnotempty(AMA), \"In Progress\",\r\n                        isnotempty(MMA) and isempty(AMA), \"Not Started\",\r\n                        isempty(MMA) and isnotempty(AMA), \"Completed\", \"Other\")\r\n| project name, id, location, resourceGroup, OSType, PowerStatus, MMA, MMAStatus, IdentityType, AMA, AMAStatus, AMAVersion, Progress",
+              "size": 0,
+              "title": "Resources Pull - Virtual Machines",
+              "noDataMessageStyle": 4,
+              "showRefreshButton": true,
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "Resource Id",
+                    "formatter": 13,
+                    "formatOptions": {
+                      "linkTarget": "Resource",
+                      "linkIsContextBlade": true,
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "_ComputerName_",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Computer",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "State",
+                    "formatter": 0,
+                    "tooltipFormat": {
+                      "tooltip": "Click to see details of the last event sent by this computer."
+                    }
+                  },
+                  {
+                    "columnMatch": "Environment",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Subscription",
+                    "formatter": 15,
+                    "formatOptions": {
+                      "linkTarget": "Resource",
+                      "linkIsContextBlade": true,
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "Heartbeat Trend",
+                    "formatter": 10,
+                    "formatOptions": {
+                      "palette": "redGreen"
+                    },
+                    "tooltipFormat": {
+                      "tooltip": "Each bar represents the bucket of time based on the Unhealthy Criteria. Showing last 30 buckets max."
+                    }
+                  },
+                  {
+                    "columnMatch": "Details",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Subscription Id",
+                    "formatter": 7,
+                    "formatOptions": {
+                      "linkTarget": "Url",
+                      "linkIsContextBlade": false
+                    }
+                  },
+                  {
+                    "columnMatch": "SubId",
+                    "formatter": 15,
+                    "formatOptions": {
+                      "linkTarget": "Resource",
+                      "linkIsContextBlade": true,
+                      "showIcon": true
+                    }
+                  }
+                ]
+              },
+              "sortBy": []
+            },
+            "conditionalVisibility": {
+              "parameterName": "selectedTab",
+              "comparison": "isNotEqualTo",
+              "value": "AzureVM"
+            },
+            "name": "Resources Pull - Virtual Machines"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "{\"version\":\"Merge/1.0\",\"merges\":[{\"id\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\",\"mergeType\":\"leftouter\",\"leftTable\":\"Heartbeat Pull\",\"rightTable\":\"Resources Pull - Virtual Machines\",\"leftColumn\":\"_ResourceId\",\"rightColumn\":\"id\"}],\"projectRename\":[{\"originalName\":\"[Resources Pull - Virtual Machines].id\",\"mergedName\":\"VM\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Heartbeat Pull].Time\",\"mergedName\":\"Last Seen\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].location\",\"mergedName\":\"location\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].resourceGroup\",\"mergedName\":\"resourceGroup\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].PowerStatus\",\"mergedName\":\"VMStatus\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].OSType\",\"mergedName\":\"OSType\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].AMA\",\"mergedName\":\"AMA\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].AMAStatus\",\"mergedName\":\"AMA Status\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].AMAVersion\",\"mergedName\":\"AMAVersion\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].name\",\"mergedName\":\"name\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Heartbeat Pull]._ResourceId\",\"mergedName\":\"_ResourceId\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Heartbeat Pull].LastHeartBeat\",\"mergedName\":\"LastHeartBeat\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Heartbeat Pull].Computer\",\"mergedName\":\"Computer\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Heartbeat Pull].SCOMAgent\",\"mergedName\":\"SCOMAgent\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].MMA\",\"mergedName\":\"MMA\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].MMAStatus\",\"mergedName\":\"MMAStatus\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].IdentityType\",\"mergedName\":\"IdentityType\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Virtual Machines].Progress\",\"mergedName\":\"Progress\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"}]}",
+              "size": 0,
+              "title": "Agent Details Virtual Machine",
+              "queryType": 7,
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "VMStatus",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "VM running",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Question",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "OSType",
+                    "formatter": 1
+                  },
+                  {
+                    "columnMatch": "AMA Status",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "Succeeded",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "unknown",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "AMAVersion",
+                    "formatter": 1
+                  },
+                  {
+                    "columnMatch": "name",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "_ResourceId",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "LastHeartBeat",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Computer",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "SCOMAgent",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "MMA",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "MMAStatus",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "IdentityType",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Progress",
+                    "formatter": 5
+                  }
+                ]
+              }
+            },
+            "conditionalVisibility": {
+              "parameterName": "selectedTab",
+              "comparison": "isEqualTo",
+              "value": "AzureVM"
+            },
+            "showPin": false,
+            "name": "Agent Details Virtual Machine"
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "AzureVM"
+      },
+      "name": "Agent Details Virtual Machines"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "title": "Agent Details Virtual Machines",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "Heartbeat\r\n| where (TimeGenerated {TimeRangeSelect:query})\r\n| where Category == \"Azure Monitor Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| extend ResType = \r\n    case(ResourceProvider == \"Microsoft.HybridCompute\" and ComputerEnvironment == \"Non-Azure\" and _ResourceId != \"\", \"Arc-enabled Servers\",\r\n        _ResourceId has \"tenants\", \"Windows Client Devices\",\r\n        ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\" and ComputerEnvironment != \"Non-Azure\", \"Virtual Machines\",\r\n        \"Other\" )\r\n| extend AgentVersion = strcat('AMA ',OSType,' ',Version)\r\n| extend DistFiltered = case(ResType == 'Arc-enabled Servers', true,\r\n                             false\r\n                            )\r\n| where DistFiltered == true\r\n| summarize LastHeartBeat = arg_max(TimeGenerated, *) by _ResourceId\r\n| extend TimeFromNow = now() - LastHeartBeat\r\n| extend [\"TimeAgo\"] = strcat(case(TimeFromNow < 2m, strcat(toint(TimeFromNow / 1s), ' seconds'), TimeFromNow < 2h, strcat(toint(TimeFromNow / 1m), ' minutes'), TimeFromNow < 2d, strcat(toint(TimeFromNow / 1h), ' hours'), strcat(toint(TimeFromNow / 1d), ' days')), ' ago')\r\n| join kind=leftouter  (Heartbeat\r\n| where Category == \"SCOM Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| project _ResourceId, Category, Computer) on _ResourceId\r\n| extend SCOMAgent = iff(isnotempty(Computer1), \"Yes\", \"No\")\r\n| project LastHeartBeat, [\"Time\"]=strcat('🕒 ', TimeAgo), _ResourceId, Computer, SCOMAgent",
+              "size": 0,
+              "title": "Heartbeat Pull",
+              "timeContext": {
+                "durationMs": 86400000
+              },
+              "queryType": 0,
+              "resourceType": "microsoft.operationalinsights/workspaces",
+              "crossComponentResources": [
+                "{Workspace}"
+              ]
+            },
+            "conditionalVisibility": {
+              "parameterName": "selectedTab",
+              "comparison": "isNotEqualTo",
+              "value": "ArcVM"
+            },
+            "name": "Heartbeat Pull"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| where type == \"microsoft.compute/virtualmachines\"\r\n| extend PowerStatus = properties.extended.instanceView.powerState.displayStatus,\r\n\tOSType = properties.storageProfile.osDisk.osType,\r\n    IdentityType = identity.type\r\n| project name, id, location, resourceGroup, PowerStatus, OSType, IdentityType\r\n| join kind=leftouter (\r\nresources\r\n| where type contains \"microsoft.compute/virtualmachines/extensions\" and (name == \"MicrosoftMonitoringAgent\" or name == \"OmsAgentForLinux\" or name == \"MMAExtension\")\r\n| parse id with * \"/virtualMachines/\" ComputerName \"/\" *\r\n| extend extensionType = properties.type, \r\n\tstatus = properties.provisioningState,\r\n\tversion = properties.typeHandlerVersion\r\n| project ComputerName, MMA = name, MMAStatus = status, version\r\n) on $left.name == $right.ComputerName\r\n| join kind=leftouter (\r\nresources\r\n| where type contains \"microsoft.compute/virtualmachines/extensions\" and (name == \"AzureMonitorWindowsAgent\" or name == \"AzureMonitorLinuxAgent\")\r\n| parse id with * \"/virtualMachines/\" ComputerName \"/\" *\r\n| extend extensionType = properties.type, \r\n\tstatus = properties.provisioningState,\r\n\tversion = properties.typeHandlerVersion\r\n| project ComputerName, AMA = name, AMAStatus = status, AMAVersion = version\r\n) on $left.name == $right.ComputerName\r\n| extend Progress = case(isnotempty(MMA) and isnotempty(AMA), \"In Progress\",\r\n                        isnotempty(MMA) and isempty(AMA), \"Not Started\",\r\n                        isempty(MMA) and isnotempty(AMA), \"Completed\", \"Other\")\r\n| project name, id, location, resourceGroup, OSType, PowerStatus, MMA, MMAStatus, IdentityType, AMA, AMAStatus, AMAVersion, Progress",
+              "size": 0,
+              "title": "Resources Pull - Arc-enabled Servers",
+              "noDataMessageStyle": 4,
+              "showRefreshButton": true,
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "{Workspace}"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "Resource Id",
+                    "formatter": 13,
+                    "formatOptions": {
+                      "linkTarget": "Resource",
+                      "linkIsContextBlade": true,
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "_ComputerName_",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Computer",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "State",
+                    "formatter": 0,
+                    "tooltipFormat": {
+                      "tooltip": "Click to see details of the last event sent by this computer."
+                    }
+                  },
+                  {
+                    "columnMatch": "Environment",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Subscription",
+                    "formatter": 15,
+                    "formatOptions": {
+                      "linkTarget": "Resource",
+                      "linkIsContextBlade": true,
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "Heartbeat Trend",
+                    "formatter": 10,
+                    "formatOptions": {
+                      "palette": "redGreen"
+                    },
+                    "tooltipFormat": {
+                      "tooltip": "Each bar represents the bucket of time based on the Unhealthy Criteria. Showing last 30 buckets max."
+                    }
+                  },
+                  {
+                    "columnMatch": "Details",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Subscription Id",
+                    "formatter": 7,
+                    "formatOptions": {
+                      "linkTarget": "Url",
+                      "linkIsContextBlade": false
+                    }
+                  },
+                  {
+                    "columnMatch": "SubId",
+                    "formatter": 15,
+                    "formatOptions": {
+                      "linkTarget": "Resource",
+                      "linkIsContextBlade": true,
+                      "showIcon": true
+                    }
+                  }
+                ]
+              },
+              "sortBy": []
+            },
+            "conditionalVisibility": {
+              "parameterName": "selectedTab",
+              "comparison": "isNotEqualTo",
+              "value": "ArcVM"
+            },
+            "name": "Resources Pull - Arc-enabled Servers"
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "{\"version\":\"Merge/1.0\",\"merges\":[{\"id\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\",\"mergeType\":\"leftouter\",\"leftTable\":\"Heartbeat Pull\",\"rightTable\":\"Resources Pull - Arc-enabled Servers\",\"leftColumn\":\"_ResourceId\",\"rightColumn\":\"id\"}],\"projectRename\":[{\"originalName\":\"[Heartbeat Pull].LastHeartBeat\",\"mergedName\":\"LastHeartBeat\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Heartbeat Pull].Time\",\"mergedName\":\"Time\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Heartbeat Pull]._ResourceId\",\"mergedName\":\"_ResourceId\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Heartbeat Pull].Computer\",\"mergedName\":\"Computer\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Heartbeat Pull].SCOMAgent\",\"mergedName\":\"SCOMAgent\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].name\",\"mergedName\":\"name\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].id\",\"mergedName\":\"id\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].location\",\"mergedName\":\"location\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].resourceGroup\",\"mergedName\":\"resourceGroup\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].OSType\",\"mergedName\":\"OSType\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].PowerStatus\",\"mergedName\":\"PowerStatus\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].MMA\",\"mergedName\":\"MMA\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].MMAStatus\",\"mergedName\":\"MMAStatus\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].IdentityType\",\"mergedName\":\"IdentityType\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].AMA\",\"mergedName\":\"AMA\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].AMAStatus\",\"mergedName\":\"AMAStatus\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].AMAVersion\",\"mergedName\":\"AMAVersion\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"},{\"originalName\":\"[Resources Pull - Arc-enabled Servers].Progress\",\"mergedName\":\"Progress\",\"fromId\":\"2589b2d9-c030-4894-bfc0-5e2ded4e9052\"}]}",
+              "size": 0,
+              "title": "Agent Details Arc-enabled Servers",
+              "queryType": 7,
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "VMStatus",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "VM running",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "Question",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "AMA Status",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "Succeeded",
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "unknown",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "name",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "_ResourceId",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "LastHeartBeat",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Computer",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "SCOMAgent",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "MMA",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "MMAStatus",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "IdentityType",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "Progress",
+                    "formatter": 5
+                  }
+                ]
+              }
+            },
+            "conditionalVisibility": {
+              "parameterName": "selectedTab",
+              "comparison": "isEqualTo",
+              "value": "ArcVM"
+            },
+            "showPin": false,
+            "name": "Agent Details Arc-enabled Servers"
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "ArcVM"
+      },
+      "name": "Agent Details Arc-Enabled"
     },
     {
       "type": 3,
@@ -995,9 +1668,481 @@
       "conditionalVisibility": {
         "parameterName": "selectedTab",
         "comparison": "isEqualTo",
-        "value": "AzureVM"
+        "value": "CPU"
       },
       "name": "CPU %"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let endDateTime = {TimeRangeSelect:end};\nlet startDateTime = {TimeRangeSelect:start};\nlet trendBinSize = {TimeRangeSelect:grain};\nlet capacityCounterName = 'cpuLimitNanoCores';\nlet usageCounterName = 'cpuUsageNanoCores';\nlet controllerName= 'ama-logs';\nKubePodInventory\n| where TimeGenerated < endDateTime\n| where TimeGenerated >= startDateTime\n| where \"a\" == \"a\"\n| where ControllerKind in ('DaemonSet','ReplicaSet','ReplicationController')\n| where Namespace in ('default','kube-system','minecraft')\n| where ControllerName in  (controllerName)\n| extend InstanceName = strcat(ClusterId, '/', ContainerName),\n         ContainerName = strcat(controllerName, '/', tostring(split(ContainerName, '/')[1])),\n         PodName = Name\n| where PodStatus in ('Running')\n| where PodName in ('ama-logs-74bcr','ama-logs-vzxq7')\n| distinct Computer, InstanceName, ContainerName\n| join hint.strategy=shuffle (\n    Perf\n    | where TimeGenerated < endDateTime\n    | where TimeGenerated >= startDateTime\n    | where ObjectName == 'K8SContainer'\n    | where CounterName == capacityCounterName\n    | summarize LimitValue = max(CounterValue) by Computer, InstanceName, bin(TimeGenerated, trendBinSize)\n    | project Computer, InstanceName, LimitStartTime = TimeGenerated, LimitEndTime = TimeGenerated + trendBinSize, LimitValue, limitA=100\n) on Computer, InstanceName\n| join kind=inner hint.strategy=shuffle (\n    Perf\n    | where TimeGenerated < endDateTime + trendBinSize\n    | where TimeGenerated >= startDateTime - trendBinSize\n    | where ObjectName == 'K8SContainer'\n    | where CounterName == usageCounterName\n    | project Computer, InstanceName, UsageValue = CounterValue, limit=100, TimeGenerated\n) on Computer, InstanceName\n| where TimeGenerated >= LimitStartTime and TimeGenerated < LimitEndTime\n| project  ContainerName, TimeGenerated, UsagePercent = UsageValue * 100.0 / LimitValue \n| summarize AggregatedValue=max(UsagePercent) by bin(TimeGenerated, trendBinSize), ContainerName\n",
+        "size": 0,
+        "title": "CPU %",
+        "noDataMessageStyle": 4,
+        "showRefreshButton": true,
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "visualization": "timechart",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Resource Id",
+              "formatter": 13,
+              "formatOptions": {
+                "linkTarget": "Resource",
+                "linkIsContextBlade": true,
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "_ComputerName_",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "Computer",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "State",
+              "formatter": 0,
+              "tooltipFormat": {
+                "tooltip": "Click to see details of the last event sent by this computer."
+              }
+            },
+            {
+              "columnMatch": "Environment",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "Subscription",
+              "formatter": 15,
+              "formatOptions": {
+                "linkTarget": "Resource",
+                "linkIsContextBlade": true,
+                "showIcon": true
+              }
+            },
+            {
+              "columnMatch": "Heartbeat Trend",
+              "formatter": 10,
+              "formatOptions": {
+                "palette": "redGreen"
+              },
+              "tooltipFormat": {
+                "tooltip": "Each bar represents the bucket of time based on the Unhealthy Criteria. Showing last 30 buckets max."
+              }
+            },
+            {
+              "columnMatch": "Details",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "Subscription Id",
+              "formatter": 7,
+              "formatOptions": {
+                "linkTarget": "Url",
+                "linkIsContextBlade": false
+              }
+            },
+            {
+              "columnMatch": "SubId",
+              "formatter": 15,
+              "formatOptions": {
+                "linkTarget": "Resource",
+                "linkIsContextBlade": true,
+                "showIcon": true
+              }
+            }
+          ]
+        },
+        "sortBy": []
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "CPU"
+      },
+      "name": "CPU % - Copy"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "type": 12,
+            "content": {
+              "version": "NotebookGroup/1.0",
+              "groupType": "editable",
+              "items": [
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "## Azure Virtual Machines"
+                  },
+                  "name": "AzureVMHeading"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "This tab lists all the virtual machines and scale sets that have reported monitoring agent heartbeat signals in the last 7 days to the selected workspace ({Workspace:name}), from either the legacy Log Analytics Agents (MMA/OMS) or the new Azure Monitor Agent (AMA). It shows the status of the monitoring agents, and if Managed Identity is enabled, which is a prerequisite for AMA. [Learn more](https://docs.microsoft.com/en-us/azure/azure-monitor/agents/azure-monitor-agent-manage?tabs=ARMAgentPowerShell%2CPowerShellWindows%2CPowerShellWindowsArc%2CCLIWindows%2CCLIWindowsArc#prerequisites)\r\n",
+                    "style": "info"
+                  },
+                  "name": "AzurVMText"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "Heartbeat\r\n| where ResourceProvider == \"Microsoft.Compute\" and ResourceType != \"virtualMachineScaleSets\"  and ComputerEnvironment != \"Non-Azure\" //and SubscriptionId == '{Subscription:id}'\r\n| summarize LastHeartBeat = arg_max(TimeGenerated, *) by _ResourceId\r\n| extend TimeFromNow = now() - LastHeartBeat\r\n| extend [\"TimeAgo\"] = strcat(case(TimeFromNow < 2m, strcat(toint(TimeFromNow / 1s), ' seconds'), TimeFromNow < 2h, strcat(toint(TimeFromNow / 1m), ' minutes'), TimeFromNow < 2d, strcat(toint(TimeFromNow / 1h), ' hours'), strcat(toint(TimeFromNow / 1d), ' days')), ' ago')\r\n| join kind=leftouter  (Heartbeat\r\n| where Category == \"SCOM Agent\"\r\n| summarize arg_max(TimeGenerated, *) by Computer\r\n| project _ResourceId, Category, Computer) on _ResourceId\r\n| extend SCOMAgent = iff(isnotempty(Computer1), \"Yes\", \"No\")\r\n| project LastHeartBeat, [\"Time\"]=strcat('🕒 ', TimeAgo), _ResourceId, Computer, SCOMAgent",
+                    "size": 1,
+                    "timeContextFromParameter": "TimeRange",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "crossComponentResources": [
+                      "{Workspace}"
+                    ],
+                    "gridSettings": {
+                      "rowLimit": 5000
+                    }
+                  },
+                  "conditionalVisibility": {
+                    "parameterName": "0",
+                    "comparison": "isEqualTo",
+                    "value": "0"
+                  },
+                  "name": "heartbeatquery"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "resources\r\n| where type == \"microsoft.compute/virtualmachines\"\r\n| extend PowerStatus = properties.extended.instanceView.powerState.displayStatus,\r\n\tOSType = properties.storageProfile.osDisk.osType,\r\n    IdentityType = identity.type\r\n| project name, id, location, resourceGroup, PowerStatus, OSType, IdentityType\r\n| join kind=leftouter (\r\nresources\r\n| where type contains \"microsoft.compute/virtualmachines/extensions\" and (name == \"MicrosoftMonitoringAgent\" or name == \"OmsAgentForLinux\" or name == \"MMAExtension\")\r\n| parse id with * \"/virtualMachines/\" ComputerName \"/\" *\r\n| extend extensionType = properties.type, \r\n\tstatus = properties.provisioningState,\r\n\tversion = properties.typeHandlerVersion\r\n| project ComputerName, MMA = name, MMAStatus = status, version\r\n) on $left.name == $right.ComputerName\r\n| join kind=leftouter (\r\nresources\r\n| where type contains \"microsoft.compute/virtualmachines/extensions\" and (name == \"AzureMonitorWindowsAgent\" or name == \"AzureMonitorLinuxAgent\")\r\n| parse id with * \"/virtualMachines/\" ComputerName \"/\" *\r\n| extend extensionType = properties.type, \r\n\tstatus = properties.provisioningState,\r\n\tversion = properties.typeHandlerVersion\r\n| project ComputerName, AMA = name, AMAStatus = status, AMAVersion = version\r\n) on $left.name == $right.ComputerName\r\n| extend Progress = case(isnotempty(MMA) and isnotempty(AMA), \"In Progress\",\r\n                        isnotempty(MMA) and isempty(AMA), \"Not Started\",\r\n                        isempty(MMA) and isnotempty(AMA), \"Completed\", \"Other\")\r\n| project name, id, location, resourceGroup, OSType, PowerStatus, MMA, MMAStatus, IdentityType, AMA, AMAStatus, AMAVersion, Progress",
+                    "size": 1,
+                    "showAnalytics": true,
+                    "noDataMessage": "No Azure Virtual Machines in the selected subscriptions. Please select the subscription(s) that contain your virtual machine(s)",
+                    "showRefreshButton": true,
+                    "showExportToExcel": true,
+                    "queryType": 1,
+                    "resourceType": "microsoft.resourcegraph/resources",
+                    "crossComponentResources": [
+                      "{Subscription}"
+                    ],
+                    "gridSettings": {
+                      "rowLimit": 5000,
+                      "filter": true,
+                      "labelSettings": [
+                        {
+                          "columnId": "id",
+                          "label": "VM"
+                        },
+                        {
+                          "columnId": "location",
+                          "label": "Location"
+                        },
+                        {
+                          "columnId": "resourceGroup",
+                          "label": "Resource Group"
+                        },
+                        {
+                          "columnId": "PowerStatus",
+                          "label": "VM Status"
+                        }
+                      ]
+                    }
+                  },
+                  "conditionalVisibility": {
+                    "parameterName": "0",
+                    "comparison": "isEqualTo",
+                    "value": "0"
+                  },
+                  "name": "azurevmquery-arg"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "{\"version\":\"Merge/1.0\",\"merges\":[{\"id\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\",\"mergeType\":\"leftouter\",\"leftTable\":\"heartbeatquery\",\"rightTable\":\"azurevmquery-arg\",\"leftColumn\":\"_ResourceId\",\"rightColumn\":\"id\"}],\"projectRename\":[{\"originalName\":\"[azurevmquery-arg].id\",\"mergedName\":\"VM\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].name\",\"mergedName\":\"name\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[heartbeatquery]._ResourceId\",\"mergedName\":\"_ResourceId\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[heartbeatquery].Computer\",\"mergedName\":\"Computer\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].location\",\"mergedName\":\"Location\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].resourceGroup\",\"mergedName\":\"Resource Group\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].OSType\",\"mergedName\":\"OSType\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].PowerStatus\",\"mergedName\":\"VM Status\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[heartbeatquery].LastHeartBeat\",\"mergedName\":\"LastHeartBeat\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].MMA\",\"mergedName\":\"MMA\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].MMAStatus\",\"mergedName\":\"MMAStatus\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].IdentityType\",\"mergedName\":\"IdentityType\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].AMA\",\"mergedName\":\"AMA\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].AMAStatus\",\"mergedName\":\"AMAStatus\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].AMAVersion\",\"mergedName\":\"AMAVersion\",\"fromId\":\"unknown\"},{\"originalName\":\"[heartbeatquery].Time\",\"mergedName\":\"Time\",\"fromId\":\"fec3768e-dd50-424e-a15f-0919f1cc20ce\"},{\"originalName\":\"[azurevmquery-arg].Progress\",\"mergedName\":\"Progress\",\"fromId\":\"unknown\"},{\"originalName\":\"[heartbeatquery].Category\",\"mergedName\":\"Category\",\"fromId\":\"unknown\"},{\"originalName\":\"[heartbeatquery].SCOMAgent\",\"mergedName\":\"SCOMAgent\",\"fromId\":\"unknown\"}]}",
+                    "size": 0,
+                    "title": "{$rowCount} Azure Virtual Machines",
+                    "noDataMessage": "No Virtual Machines found in the selected workspace with a relationship with the selected workspace and a heartbeat in the last 7 days. Please select a different workspace/subscription.",
+                    "showRefreshButton": true,
+                    "showExportToExcel": true,
+                    "exportToExcelOptions": "all",
+                    "queryType": 7,
+                    "gridSettings": {
+                      "formatters": [
+                        {
+                          "columnMatch": "VM",
+                          "formatter": 13,
+                          "formatOptions": {
+                            "linkTarget": "Resource",
+                            "linkIsContextBlade": true,
+                            "showIcon": true,
+                            "customColumnWidthSetting": "25ch"
+                          }
+                        },
+                        {
+                          "columnMatch": "name",
+                          "formatter": 5
+                        },
+                        {
+                          "columnMatch": "_ResourceId",
+                          "formatter": 5
+                        },
+                        {
+                          "columnMatch": "Computer",
+                          "formatter": 5
+                        },
+                        {
+                          "columnMatch": "Location",
+                          "formatter": 17,
+                          "formatOptions": {
+                            "customColumnWidthSetting": "16ch"
+                          }
+                        },
+                        {
+                          "columnMatch": "Resource Group",
+                          "formatter": 14,
+                          "formatOptions": {
+                            "linkTarget": null,
+                            "showIcon": true,
+                            "customColumnWidthSetting": "25ch"
+                          }
+                        },
+                        {
+                          "columnMatch": "OSType",
+                          "formatter": 1,
+                          "formatOptions": {
+                            "customColumnWidthSetting": "22ch"
+                          }
+                        },
+                        {
+                          "columnMatch": "LastHeartBeat",
+                          "formatter": 5
+                        },
+                        {
+                          "columnMatch": "MMA",
+                          "formatter": 5
+                        },
+                        {
+                          "columnMatch": "MMAStatus",
+                          "formatter": 18,
+                          "formatOptions": {
+                            "thresholdsOptions": "icons",
+                            "thresholdsGrid": [
+                              {
+                                "operator": "==",
+                                "thresholdValue": "Succeeded",
+                                "representation": "success",
+                                "text": "Installed"
+                              },
+                              {
+                                "operator": "is Empty",
+                                "representation": "Blank",
+                                "text": "{0}{1}"
+                              },
+                              {
+                                "operator": "Default",
+                                "thresholdValue": null,
+                                "representation": "question",
+                                "text": "{0}{1}"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "columnMatch": "IdentityType",
+                          "formatter": 18,
+                          "formatOptions": {
+                            "thresholdsOptions": "icons",
+                            "thresholdsGrid": [
+                              {
+                                "operator": "==",
+                                "thresholdValue": "SystemAssigned",
+                                "representation": "Blank",
+                                "text": "Yes"
+                              },
+                              {
+                                "operator": "Default",
+                                "thresholdValue": null,
+                                "representation": "Blank",
+                                "text": "No"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "columnMatch": "AMA",
+                          "formatter": 5
+                        },
+                        {
+                          "columnMatch": "AMAStatus",
+                          "formatter": 5
+                        },
+                        {
+                          "columnMatch": "AMAVersion",
+                          "formatter": 18,
+                          "formatOptions": {
+                            "thresholdsOptions": "icons",
+                            "thresholdsGrid": [
+                              {
+                                "operator": "is Empty",
+                                "representation": "Blank",
+                                "text": "Not Installed"
+                              },
+                              {
+                                "operator": "Default",
+                                "thresholdValue": null,
+                                "representation": "success",
+                                "text": "Agent Version {0}{1}"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "columnMatch": "Progress",
+                          "formatter": 18,
+                          "formatOptions": {
+                            "thresholdsOptions": "icons",
+                            "thresholdsGrid": [
+                              {
+                                "operator": "contains",
+                                "thresholdValue": "Not Started",
+                                "representation": "GetStarted",
+                                "text": "{0}{1}"
+                              },
+                              {
+                                "operator": "contains",
+                                "thresholdValue": "In Progress",
+                                "representation": "Postpone",
+                                "text": "{0}{1}"
+                              },
+                              {
+                                "operator": "contains",
+                                "thresholdValue": "Completed",
+                                "representation": "SmileyHappy",
+                                "text": "{0}{1}"
+                              },
+                              {
+                                "operator": "Default",
+                                "thresholdValue": null,
+                                "representation": "Monitoring",
+                                "text": "{0}{1}"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "columnMatch": "SCOMAgent",
+                          "formatter": 18,
+                          "formatOptions": {
+                            "thresholdsOptions": "icons",
+                            "thresholdsGrid": [
+                              {
+                                "operator": "==",
+                                "thresholdValue": "Yes",
+                                "representation": "1",
+                                "text": "{0}{1}"
+                              },
+                              {
+                                "operator": "Default",
+                                "thresholdValue": null,
+                                "representation": "Blank",
+                                "text": "{0}{1}"
+                              }
+                            ]
+                          }
+                        }
+                      ],
+                      "rowLimit": 5000,
+                      "filter": true,
+                      "sortBy": [
+                        {
+                          "itemKey": "$gen_link_VM_0",
+                          "sortOrder": 1
+                        }
+                      ],
+                      "labelSettings": [
+                        {
+                          "columnId": "VM",
+                          "label": "VM Name"
+                        },
+                        {
+                          "columnId": "OSType",
+                          "label": "Operating System"
+                        },
+                        {
+                          "columnId": "MMAStatus",
+                          "label": "MMA/OMS Status"
+                        },
+                        {
+                          "columnId": "IdentityType",
+                          "label": "Managed Identity Enabled?"
+                        },
+                        {
+                          "columnId": "AMAVersion",
+                          "label": "AMA Installed"
+                        },
+                        {
+                          "columnId": "Time",
+                          "label": "AMA Status"
+                        },
+                        {
+                          "columnId": "Progress",
+                          "label": "Migration Status"
+                        },
+                        {
+                          "columnId": "SCOMAgent",
+                          "label": "SCOM Agent"
+                        }
+                      ]
+                    },
+                    "sortBy": [
+                      {
+                        "itemKey": "$gen_link_VM_0",
+                        "sortOrder": 1
+                      }
+                    ]
+                  },
+                  "showPin": false,
+                  "name": "AzureVM-Combo"
+                }
+              ]
+            },
+            "conditionalVisibility": {
+              "parameterName": "AzureAgentCount",
+              "comparison": "isNotEqualTo",
+              "value": "0"
+            },
+            "name": "AzureVMGroup"
+          },
+          {
+            "type": 1,
+            "content": {
+              "json": "No Azure Virtual Machines found connected to this workspace ({Workspace:label}) that received agent heartbeat signal in the last 7 days. Please select a different workspace using the drop-down menu at the top of this workbook.",
+              "style": "info"
+            },
+            "conditionalVisibility": {
+              "parameterName": "AzureAgentCount",
+              "comparison": "isEqualTo",
+              "value": "0"
+            },
+            "name": "NoAzureVMs-text"
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "AzureVM"
+      },
+      "name": "AzureVMGroup - Copy"
     }
   ],
   "fallbackResourceIds": [
